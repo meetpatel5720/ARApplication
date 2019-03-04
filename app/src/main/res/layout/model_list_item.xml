@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/model_preview_layout"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:padding="5dp">
+
+    <ImageView
+        android:id="@+id/model_preview"
+        android:layout_width="60dp"
+        android:layout_height="60dp" />
+
+    <ImageView
+        android:id="@+id/is_selected_check"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:background="@drawable/selected_icon"
+        android:layout_alignEnd="@+id/model_preview"
+        android:layout_alignTop="@+id/model_preview"
+        android:visibility="invisible"/>
+
+</RelativeLayout>
