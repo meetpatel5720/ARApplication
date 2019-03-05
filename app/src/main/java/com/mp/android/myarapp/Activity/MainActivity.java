@@ -18,9 +18,11 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.GestureDetector;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.PixelCopy;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
@@ -37,8 +39,15 @@ import com.google.ar.core.exceptions.CameraNotAvailableException;
 import com.google.ar.core.exceptions.UnavailableException;
 import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
+import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.HitTestResult;
+import com.google.ar.sceneform.Scene;
+import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.ModelRenderable;
+import com.google.ar.sceneform.ux.ArFragment;
+import com.google.ar.sceneform.ux.FootprintSelectionVisualizer;
+import com.google.ar.sceneform.ux.TransformableNode;
+import com.google.ar.sceneform.ux.TransformationSystem;
 import com.mp.android.myarapp.Adapter.ModelListAdapter;
 import com.mp.android.myarapp.Data.Model;
 import com.mp.android.myarapp.R;
@@ -53,21 +62,18 @@ import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouchListener{
 
     private static final double MIN_OPENGL_VERSION = 3.0;
     ArSceneView arSceneView;
 
-    Button cameraButton;
-    Button settingButton;
-    Button modelSelectButton;
-    ArrayList<Model> modelArrayList = new ArrayList<>();
-    RecyclerView modelList;
-    ModelListAdapter modelListAdapter;
-    RelativeLayout modelListRelativeLayout;
-    String modelName;
+    private ArrayList<Model> modelArrayList = new ArrayList<>();
+    private ModelListAdapter modelListAdapter;
+    private RelativeLayout modelListRelativeLayout;
 
+    private TransformationSystem transformationSystem;
     private GestureDetector gestureDetector;
+
     private ModelRenderable chaletRenderable;
     private ModelRenderable mashroomRenderable;
 
@@ -128,10 +134,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         arSceneView = findViewById(R.id.ux_fragment);
-        cameraButton = findViewById(R.id.camera);
-        settingButton = findViewById(R.id.setting);
-        modelSelectButton = findViewById(R.id.select_model);
-        modelList = findViewById(R.id.model_list);
+        Button cameraButton = findViewById(R.id.camera);
+        Button settingButton = findViewById(R.id.setting);
+        Button modelSelectButton = findViewById(R.id.select_model);
+        RecyclerView modelList = findViewById(R.id.model_list);
         modelListRelativeLayout = findViewById(R.id.model_list_layout);
         modelList.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
 
@@ -160,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        transformationSystem = makeTransformationSystem();
         buildModel();
         gestureDetector =
                 new GestureDetector(
@@ -176,6 +183,7 @@ public class MainActivity extends AppCompatActivity {
                                 return true;
                             }
                         });
+        arSceneView.getScene().addOnPeekTouchListener(this);
 
         arSceneView
                 .getScene()
@@ -190,6 +198,29 @@ public class MainActivity extends AppCompatActivity {
                 takePhoto(arSceneView);
             }
         });
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            // Standard Android full-screen functionality.
+            getWindow()
+                    .getDecorView()
+                    .setSystemUiVisibility(
+                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                    | View.SYSTEM_UI_FLAG_FULLSCREEN
+                                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
+    @Override
+    public void onPeekTouch(HitTestResult hitTestResult, MotionEvent motionEvent) {
+        transformationSystem.onTouch(hitTestResult, motionEvent);
     }
 
     private void onSingleTap(MotionEvent tap) {
@@ -207,13 +238,20 @@ public class MainActivity extends AppCompatActivity {
                     Anchor anchor = hit.createAnchor();
                     AnchorNode anchorNode = new AnchorNode(anchor);
                     anchorNode.setParent(arSceneView.getScene());
-                    anchorNode.setRenderable(getModel());
+
+                    TransformableNode obj = new TransformableNode(transformationSystem);
+                    obj.setParent(anchorNode);
+                    obj.setRenderable(getModel());
+                    obj.select();
+                    Toast.makeText(this, "hit", Toast.LENGTH_LONG)
+                            .show();
+                    break;
                 }
             }
         }
     }
 
-    public void buildModel(){
+    public void buildModel() {
         CompletableFuture<ModelRenderable> chalet1 =
                 ModelRenderable.builder().setSource(this, Uri.parse("Chalet.sfb")).build();
         CompletableFuture<ModelRenderable> mashroom =
@@ -230,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
                         chaletRenderable = chalet1.get();
                         mashroomRenderable = mashroom.get();
                     } catch (InterruptedException | ExecutionException ex) {
-                        Toast.makeText(this,"Unable to load model",Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Unable to load model", Toast.LENGTH_LONG).show();
                         Log.d("this", "Unable to load renderable");
                     }
                     return null;
@@ -238,6 +276,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String getModelName() {
+        String modelName;
         if (modelListAdapter.getSelectedModel().getName() == null) {
             modelName = "Chalet.sfb";
         } else {
@@ -256,6 +295,11 @@ public class MainActivity extends AppCompatActivity {
             default:
                 return chaletRenderable;
         }
+    }
+
+    protected TransformationSystem makeTransformationSystem() {
+        FootprintSelectionVisualizer selectionVisualizer = new FootprintSelectionVisualizer();
+        return new TransformationSystem(getResources().getDisplayMetrics(), selectionVisualizer);
     }
 
     private String generateFilename() {
@@ -283,7 +327,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void takePhoto(ArSceneView view) {
         final String filename = generateFilename();
-
         final Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(),
                 Bitmap.Config.ARGB_8888);
 
@@ -295,8 +338,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     saveBitmapToDisk(bitmap, filename);
                 } catch (IOException e) {
-                    Toast toast = Toast.makeText(MainActivity.this, e.toString(),
-                            Toast.LENGTH_LONG);
+                    Toast toast = Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_LONG);
                     toast.show();
                     return;
                 }
@@ -323,4 +365,5 @@ public class MainActivity extends AppCompatActivity {
             handlerThread.quitSafely();
         }, new Handler(handlerThread.getLooper()));
     }
+
 }
