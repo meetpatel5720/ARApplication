@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
@@ -51,6 +52,7 @@ import com.google.ar.sceneform.ux.TransformationSystem;
 import com.mp.android.myarapp.Adapter.ModelListAdapter;
 import com.mp.android.myarapp.Data.Model;
 import com.mp.android.myarapp.R;
+import com.preference.PowerPreference;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -62,7 +64,12 @@ import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouchListener{
+import static com.mp.android.myarapp.Misc.Constant.IS_PLANE_RENDER_VISIBLE;
+import static com.mp.android.myarapp.Misc.Constant.SHARED_PREFS;
+
+public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouchListener {
+
+
 
     private static final double MIN_OPENGL_VERSION = 3.0;
     ArSceneView arSceneView;
@@ -76,6 +83,8 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
 
     private ModelRenderable chaletRenderable;
     private ModelRenderable mashroomRenderable;
+    private ModelRenderable truckRenderable;
+    private ModelRenderable tankRenderable;
 
     public static boolean checkIsSupportedDeviceOrFinish(Activity activity) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
@@ -122,6 +131,8 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
             Log.d("Unable to get camera", String.valueOf(ex));
             finish();
         }
+
+        arSceneView.getPlaneRenderer().setEnabled(loadPrefs());
     }
 
     @Override
@@ -132,17 +143,21 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
             return;
         }
         setContentView(R.layout.activity_main);
+        PowerPreference.getDefaultFile().setDefaults(R.xml.preferences);
 
         arSceneView = findViewById(R.id.ux_fragment);
-        Button cameraButton = findViewById(R.id.camera);
+        Button clickButton = findViewById(R.id.camera);
         Button settingButton = findViewById(R.id.setting);
         Button modelSelectButton = findViewById(R.id.select_model);
         RecyclerView modelList = findViewById(R.id.model_list);
         modelListRelativeLayout = findViewById(R.id.model_list_layout);
         modelList.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
 
-        modelArrayList.add(new Model(R.drawable.chalet, "Chalet.sfb", false));
-        modelArrayList.add(new Model(R.drawable.mashroom, "mashroom.sfb", false));
+        modelArrayList.add(new Model(R.drawable.chalet, "Chalet.sfb"));
+        modelArrayList.add(new Model(R.drawable.mashroom, "mashroom.sfb"));
+        modelArrayList.add(new Model(R.drawable.truck, "truck.sfb"));
+        modelArrayList.add(new Model(R.drawable.tank, "tank.sfb"));
+
 
         modelListAdapter = new ModelListAdapter(this, modelArrayList);
         modelList.setAdapter(modelListAdapter);
@@ -192,12 +207,13 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
                             return gestureDetector.onTouchEvent(event);
                         });
 
-        cameraButton.setOnClickListener(new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 takePhoto(arSceneView);
             }
         });
+        arSceneView.getPlaneRenderer().setEnabled(loadPrefs());
     }
 
     @Override
@@ -243,8 +259,6 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
                     obj.setParent(anchorNode);
                     obj.setRenderable(getModel());
                     obj.select();
-                    Toast.makeText(this, "hit", Toast.LENGTH_LONG)
-                            .show();
                     break;
                 }
             }
@@ -252,21 +266,27 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
     }
 
     public void buildModel() {
-        CompletableFuture<ModelRenderable> chalet1 =
+        CompletableFuture<ModelRenderable> chalet =
                 ModelRenderable.builder().setSource(this, Uri.parse("Chalet.sfb")).build();
         CompletableFuture<ModelRenderable> mashroom =
                 ModelRenderable.builder().setSource(this, Uri.parse("mashroom.sfb")).build();
+        CompletableFuture<ModelRenderable> truck =
+                ModelRenderable.builder().setSource(this, Uri.parse("truck.sfb")).build();
+        CompletableFuture<ModelRenderable> tank =
+                ModelRenderable.builder().setSource(this, Uri.parse("tank.sfb")).build();
 
         CompletableFuture.allOf(
-                chalet1,
-                mashroom)
+                chalet,
+                mashroom, truck, tank)
                 .handle((notUsed, throwable) -> {
                     if (throwable != null) {
                         return null;
                     }
                     try {
-                        chaletRenderable = chalet1.get();
+                        chaletRenderable = chalet.get();
                         mashroomRenderable = mashroom.get();
+                        truckRenderable = truck.get();
+                        tankRenderable = tank.get();
                     } catch (InterruptedException | ExecutionException ex) {
                         Toast.makeText(this, "Unable to load model", Toast.LENGTH_LONG).show();
                         Log.d("this", "Unable to load renderable");
@@ -292,6 +312,10 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
                 return chaletRenderable;
             case "mashroom.sfb":
                 return mashroomRenderable;
+            case "truck.sfb":
+                return truckRenderable;
+            case "tank.sfb":
+                return tankRenderable;
             default:
                 return chaletRenderable;
         }
@@ -366,4 +390,8 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
         }, new Handler(handlerThread.getLooper()));
     }
 
+    private boolean loadPrefs() {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS,MODE_PRIVATE);
+        return sharedPreferences.getBoolean(IS_PLANE_RENDER_VISIBLE,false);
+    }
 }

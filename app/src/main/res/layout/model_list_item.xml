@@ -7,8 +7,8 @@
 
     <ImageView
         android:id="@+id/model_preview"
-        android:layout_width="60dp"
-        android:layout_height="60dp" />
+        android:layout_width="55dp"
+        android:layout_height="55dp" />
 
     <ImageView
         android:id="@+id/is_selected_check"

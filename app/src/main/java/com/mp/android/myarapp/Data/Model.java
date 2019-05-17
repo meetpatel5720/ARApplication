@@ -11,14 +11,12 @@ import java.util.concurrent.CompletableFuture;
 public class Model {
     public int previewId;
     public String name;
-    public boolean isSelected;
 
     public Model(){}
 
-    public Model(int previewId, String name, boolean isSelected) {
+    public Model(int previewId, String name) {
         this.previewId = previewId;
         this.name = name;
-        this.isSelected = isSelected;
     }
 
     public int getPreviewId() {
@@ -27,14 +25,6 @@ public class Model {
 
     public void setPreviewId(int previewId) {
         this.previewId = previewId;
-    }
-
-    public boolean isSelected() {
-        return isSelected;
-    }
-
-    public void setSelected(boolean selected) {
-        isSelected = selected;
     }
 
     public String getName() {

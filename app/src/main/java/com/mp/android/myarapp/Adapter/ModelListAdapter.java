@@ -22,12 +22,11 @@ import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static com.mp.android.myarapp.Misc.Constant.isAnySelected;
 
 public class ModelListAdapter extends RecyclerView.Adapter<ModelListAdapter.ModelListViewHolder> {
-    Context context;
-    ArrayList<Model> modelList;
-    Model selectedModel = new Model();
+    private Context context;
+    private ArrayList<Model> modelList;
+    private Model selectedModel = new Model();
 
     public ModelListAdapter(@NonNull Context context, ArrayList<Model> modelList) {
         this.context = context;

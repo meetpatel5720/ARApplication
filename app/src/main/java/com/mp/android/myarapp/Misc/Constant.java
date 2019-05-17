@@ -1,5 +1,8 @@
 package com.mp.android.myarapp.Misc;
 
+
 public class Constant {
-    public static boolean isAnySelected = false;
+    public static final String SHARED_PREFS = "sharedPrefs";
+    public static final String IS_PLANE_RENDER_VISIBLE = "planeRenderVisible";
+
 }
