@@ -70,7 +70,6 @@ import static com.mp.android.myarapp.Misc.Constant.SHARED_PREFS;
 public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouchListener {
 
 
-
     private static final double MIN_OPENGL_VERSION = 3.0;
     ArSceneView arSceneView;
 
@@ -143,7 +142,6 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
             return;
         }
         setContentView(R.layout.activity_main);
-        PowerPreference.getDefaultFile().setDefaults(R.xml.preferences);
 
         arSceneView = findViewById(R.id.ux_fragment);
         Button clickButton = findViewById(R.id.camera);
@@ -391,7 +389,7 @@ public class MainActivity extends AppCompatActivity implements Scene.OnPeekTouch
     }
 
     private boolean loadPrefs() {
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS,MODE_PRIVATE);
-        return sharedPreferences.getBoolean(IS_PLANE_RENDER_VISIBLE,false);
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, MODE_PRIVATE);
+        return sharedPreferences.getBoolean(IS_PLANE_RENDER_VISIBLE, false);
     }
 }
